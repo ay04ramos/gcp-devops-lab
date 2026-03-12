@@ -1,0 +1,41 @@
+substitutions:
+  _REGION: "us-central1"
+  _REPO: "notes-repo"
+  _SERVICE: "notes-service"
+  _IMAGE_NAME: "notes-app"
+  _IMAGE_TAG: "$SHORT_SHA"
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Build"
+    args:
+      [
+        "build",
+        "-t",
+        "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${_IMAGE_TAG}",
+        "."
+      ]
+
+  - name: "gcr.io/cloud-builders/docker"
+    id: "Push"
+    args:
+      [
+        "push",
+        "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${_IMAGE_TAG}"
+      ]
+
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "Deploy"
+    args:
+      [
+        "run","deploy","${_SERVICE}",
+        "--image","${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${_IMAGE_TAG}",
+        "--region","${_REGION}",
+        "--platform","managed",
+        "--allow-unauthenticated",
+        "--port","8080",
+        "--set-env-vars","GOOGLE_CLOUD_PROJECT=$PROJECT_ID"
+      ]
+
+images:
+  - "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/${_IMAGE_NAME}:${_IMAGE_TAG}"
