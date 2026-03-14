@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Notes App UI (Cloud Run + Firestore)</title>
+  <style>
+    body { font-family: system-ui, Arial; margin: 32px; max-width: 900px; }
+    input, select, button { padding: 8px 10px; margin: 6px 0; }
+    input, select { width: 340px; }
+    .note { background: #f7f7f8; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+    .muted { color:#666; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h2>Notes App — Demo UI</h2>
+  <div>
+    <label>Cloud Run URL:</label><br/>
+    <input id="api" placeholder="https://YOUR-CLOUD-RUN-URL" />
+    <button onclick="setApi()">Use</button>
+    <span id="status"></span>
+  </div>
+  <h3>Create Note</h3>
+  <input id="message" placeholder="Message e.g., Hello from UI" />
+  <select id="version"><option>v1</option><option>v2</option></select>
+  <button onclick="createNote()">Create</button>
+  <h3>All Notes</h3>
+  <button onclick="loadNotes()">Refresh</button>
+  <div id="notes"></div>
+<script>
+let API = "";
+function setApi(){ const v=document.getElementById("api").value.trim(); API=v.replace(/\/+$/,''); document.getElementById("status").textContent=API?"✓ URL set":""; if(API) loadNotes(); }
+async function createNote(){
+  if(!API) return alert("Set Cloud Run URL first");
+  const msg=document.getElementById("message").value.trim();
+  const ver=document.getElementById("version").value;
+  if(!msg) return alert("Message is required");
+  const res=await fetch(`${API}/notes`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:msg,version:ver})});
+  if(!res.ok) return alert("Create failed: "+await res.text());
+  document.getElementById("message").value=""; loadNotes();
+}
+async function loadNotes(){
+  if(!API) return alert("Set Cloud Run URL first");
+  const res=await fetch(`${API}/notes`); const data=await res.json();
+  document.getElementById("notes").innerHTML=(data||[]).map(n=>`
+    <div class="note">
+      <div><b>${escapeHtml(n.message||"")}</b></div>
+      <div class="muted">version: ${n.version||"?"} • time: ${n.timestamp||"?"} • id: ${n.id||""}</div>
+    </div>`).join("");
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+</script>
+</body>
+</html>
